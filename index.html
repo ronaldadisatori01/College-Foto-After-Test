@@ -1,146 +1,90 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <title>Galeri Tim</title>
-  <script src="https://widget.cloudinary.com/v2.0/global/all.js"></script>
+<title>Galeri Publik</title>
+<script src="https://widget.cloudinary.com/v2.0/global/all.js"></script>
+<style>
+body {
+  margin:0;
+  font-family:sans-serif;
+  background:#111;
+  color:white;
+}
 
-  <style>
-    body {
-      margin: 0;
-      font-family: 'Segoe UI', sans-serif;
-      background: #0f0f0f;
-      color: white;
-    }
+header{
+  padding:15px;
+  font-size:18px;
+  font-weight:bold;
+}
 
-    header {
-      padding: 15px 20px;
-      background: #1a1a1a;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.5);
-      position: sticky;
-      top: 0;
-      z-index: 10;
-    }
+button{
+  margin:10px;
+  padding:10px 15px;
+  border:none;
+  border-radius:8px;
+  background:#1e90ff;
+  color:white;
+}
 
-    h1 {
-      font-size: 18px;
-      margin: 0;
-    }
+.gallery{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(120px,1fr));
+  gap:5px;
+  padding:10px;
+}
 
-    button {
-      padding: 8px 14px;
-      border: none;
-      border-radius: 8px;
-      background: #4285f4;
-      color: white;
-      cursor: pointer;
-      font-weight: bold;
-    }
-
-    button:hover {
-      background: #3367d6;
-    }
-
-    .gallery {
-      column-count: 3;
-      column-gap: 8px;
-      padding: 8px;
-    }
-
-    @media(max-width: 900px){
-      .gallery { column-count: 2; }
-    }
-
-    @media(max-width: 600px){
-      .gallery { column-count: 2; }
-    }
-
-    .gallery img, .gallery video {
-      width: 100%;
-      margin-bottom: 8px;
-      border-radius: 12px;
-      cursor: pointer;
-      transition: 0.3s;
-    }
-
-    .gallery img:hover {
-      transform: scale(1.02);
-    }
-
-    .empty {
-      text-align: center;
-      margin-top: 50px;
-      opacity: 0.5;
-    }
-  </style>
+.gallery img{
+  width:100%;
+  height:150px;
+  object-fit:cover;
+  border-radius:8px;
+}
+</style>
 </head>
 <body>
 
-<header>
-  <h1>📂 Galeri Dokumentasi Tim</h1>
-  <button onclick="openUpload()">+ Upload</button>
-</header>
+<header>📸 Galeri Publik</header>
+
+<button onclick="upload()">Upload Foto</button>
 
 <div class="gallery" id="gallery"></div>
-<div class="empty" id="emptyText">Belum ada foto...</div>
 
 <script>
+const cloudName = "dqyad2pn9";
+const tagName = "publik";
 
-let images = [];
-
-function render(){
-  const gallery = document.getElementById("gallery");
-  const emptyText = document.getElementById("emptyText");
-
-  gallery.innerHTML = "";
-
-  if(images.length === 0){
-    emptyText.style.display = "block";
-  } else {
-    emptyText.style.display = "none";
-  }
-
-  images.forEach(file => {
-    if(file.type === "video"){
-      const video = document.createElement("video");
-      video.src = file.url;
-      video.controls = true;
-      gallery.appendChild(video);
-    } else {
-      const img = document.createElement("img");
-      img.src = file.url;
-      img.onclick = () => window.open(file.url, "_blank");
-      gallery.appendChild(img);
-    }
-  });
-}
-
-function openUpload(){
+function upload(){
   const widget = cloudinary.createUploadWidget({
-    cloudName: "dqyad2pn9",
+    cloudName: cloudName,
     uploadPreset: "College_foto",
-    sources: ["local", "camera"],
-    multiple: true,
-    resourceType: "auto"
-  },
-  (error, result) => {
+    tags: [tagName]
+  }, (error, result) => {
     if(!error && result.event === "success"){
-      images.unshift({
-        url: result.info.secure_url,
-        type: result.info.resource_type
-      });
-      render();
+      loadImages();
     }
   });
-
   widget.open();
 }
 
-render();
+async function loadImages(){
+  const res = await fetch(
+    `https://res.cloudinary.com/${cloudName}/image/list/${tagName}.json`
+  );
+  const data = await res.json();
 
+  const gallery = document.getElementById("gallery");
+  gallery.innerHTML="";
+
+  data.resources.forEach(img=>{
+    gallery.innerHTML += `
+      <a href="https://res.cloudinary.com/${cloudName}/image/upload/${img.public_id}.jpg" target="_blank">
+        <img src="https://res.cloudinary.com/${cloudName}/image/upload/w_400/${img.public_id}.jpg">
+      </a>
+    `;
+  });
+}
+
+loadImages();
 </script>
 
 </body>
