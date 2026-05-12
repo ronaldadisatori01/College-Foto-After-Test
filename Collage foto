@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Dokumentasi Tim</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body { font-family: Arial; background:#f4f4f4; padding:20px; }
+    .box { background:white; padding:15px; border-radius:10px; margin-bottom:20px; }
+    button { padding:8px 15px; border:none; background:#007bff; color:white; border-radius:6px; }
+    input, select { padding:8px; margin:5px 0; width:100%; }
+    .gallery { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px; }
+    .card { background:white; padding:8px; border-radius:8px; }
+    img, video { width:100%; border-radius:8px; }
+  </style>
+</head>
+<body>
+
+<h2>Dokumentasi Tim</h2>
+
+<div class="box" id="loginBox">
+  <input type="password" id="password" placeholder="Masukkan password tim">
+  <button onclick="login()">Masuk</button>
+</div>
+
+<div id="mainContent" style="display:none">
+
+  <div class="box">
+    <select id="projectSelect"></select>
+    <input type="file" id="fileInput">
+    <button onclick="uploadFile()">Upload</button>
+    <br><br>
+    <input type="text" id="searchInput" placeholder="Cari file..." oninput="render()">
+    <input type="date" id="filterDate" onchange="render()">
+    <select id="sortOption" onchange="render()">
+      <option value="newest">Terbaru</option>
+      <option value="oldest">Terlama</option>
+    </select>
+    <br><br>
+    <button onclick="downloadAll()">Download Semua</button>
+  </div>
+
+  <div class="gallery" id="gallery"></div>
+
+</div>
+
+<script>
+const TEAM_PASSWORD = "tim123";
+const projects = ["Proyek-A","Proyek-B","Meeting","Lapangan"];
+let files = JSON.parse(localStorage.getItem("files") || "[]");
+
+function login(){
+  if(document.getElementById("password").value === TEAM_PASSWORD){
+    document.getElementById("loginBox").style.display="none";
+    document.getElementById("mainContent").style.display="block";
+    loadProjects();
+    render();
+  } else {
+    alert("Password salah");
+  }
+}
+
+function loadProjects(){
+  const select = document.getElementById("projectSelect");
+  projects.forEach(p=>{
+    const opt=document.createElement("option");
+    opt.value=p;
+    opt.textContent=p;
+    select.appendChild(opt);
+  });
+}
+
+function uploadFile(){
+  const fileInput=document.getElementById("fileInput");
+  const project=document.getElementById("projectSelect").value;
+  const file=fileInput.files[0];
+  if(!file) return alert("Pilih file dulu");
+
+  const reader=new FileReader();
+  reader.onload=function(e){
+    files.push({
+      name:file.name,
+      url:e.target.result,
+      project:project,
+      date:new Date().toISOString()
+    });
+    localStorage.setItem("files",JSON.stringify(files));
+    render();
+  };
+  reader.readAsDataURL(file);
+}
+
+function render(){
+  const gallery=document.getElementById("gallery");
+  const project=document.getElementById("projectSelect").value;
+  const keyword=document.getElementById("searchInput").value.toLowerCase();
+  const filterDate=document.getElementById("filterDate").value;
+  const sort=document.getElementById("sortOption").value;
+
+  let filtered=files.filter(f=>f.project===project);
+
+  if(keyword) filtered=filtered.filter(f=>f.name.toLowerCase().includes(keyword));
+  if(filterDate) filtered=filtered.filter(f=>f.date.startsWith(filterDate));
+
+  filtered.sort((a,b)=> sort==="newest" ?
+    new Date(b.date)-new Date(a.date) :
+    new Date(a.date)-new Date(b.date)
+  );
+
+  gallery.innerHTML="";
+  filtered.forEach(f=>{
+    const div=document.createElement("div");
+    div.className="card";
+    div.innerHTML=`
+      ${f.url.match(/\\.(mp4|webm|ogg)/i)?
+        `<video src="${f.url}" controls></video>`:
+        `<img src="${f.url}">`
+      }
+      <small>${f.name}</small>
+    `;
+    gallery.appendChild(div);
+  });
+}
+
+function downloadAll(){
+  alert("Browser akan download satu per satu file.");
+  const project=document.getElementById("projectSelect").value;
+  files.filter(f=>f.project===project).forEach(f=>{
+    const a=document.createElement("a");
+    a.href=f.url;
+    a.download=f.name;
+    a.click();
+  });
+}
+</script>
+
+</body>
+</html>
