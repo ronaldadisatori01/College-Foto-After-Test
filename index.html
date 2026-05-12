@@ -1,185 +1,145 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Team Gallery</title>
+  <meta charset="UTF-8">
+  <title>Galeri Tim</title>
   <script src="https://widget.cloudinary.com/v2.0/global/all.js"></script>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <style>
     body {
-      margin:0;
+      margin: 0;
       font-family: 'Segoe UI', sans-serif;
-      background:#0f0f0f;
-      color:white;
+      background: #0f0f0f;
+      color: white;
     }
 
     header {
-      padding:15px 20px;
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      background:#111;
-      position:sticky;
-      top:0;
-      z-index:10;
-      border-bottom:1px solid #222;
+      padding: 15px 20px;
+      background: #1a1a1a;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+      position: sticky;
+      top: 0;
+      z-index: 10;
     }
 
-    h2 { margin:0; }
+    h1 {
+      font-size: 18px;
+      margin: 0;
+    }
 
     button {
-      background:#1e88ff;
-      border:none;
-      padding:8px 14px;
-      color:white;
-      border-radius:8px;
-      cursor:pointer;
+      padding: 8px 14px;
+      border: none;
+      border-radius: 8px;
+      background: #4285f4;
+      color: white;
+      cursor: pointer;
+      font-weight: bold;
     }
 
     button:hover {
-      opacity:0.9;
+      background: #3367d6;
     }
 
-    #gallery {
-      display:grid;
-      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-      gap:10px;
-      padding:15px;
+    .gallery {
+      column-count: 3;
+      column-gap: 8px;
+      padding: 8px;
     }
 
-    .card {
-      position:relative;
-      overflow:hidden;
-      border-radius:12px;
-      cursor:pointer;
+    @media(max-width: 900px){
+      .gallery { column-count: 2; }
     }
 
-    .card img {
-      width:100%;
-      height:100%;
-      object-fit:cover;
-      transition:0.3s;
+    @media(max-width: 600px){
+      .gallery { column-count: 2; }
     }
 
-    .card:hover img {
-      transform:scale(1.05);
+    .gallery img, .gallery video {
+      width: 100%;
+      margin-bottom: 8px;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: 0.3s;
     }
 
-    .overlay {
-      position:absolute;
-      bottom:0;
-      left:0;
-      right:0;
-      padding:8px;
-      background:linear-gradient(to top, rgba(0,0,0,0.7), transparent);
-      font-size:12px;
+    .gallery img:hover {
+      transform: scale(1.02);
     }
 
-    /* Fullscreen preview */
-    #preview {
-      display:none;
-      position:fixed;
-      inset:0;
-      background:rgba(0,0,0,0.9);
-      justify-content:center;
-      align-items:center;
-      z-index:20;
+    .empty {
+      text-align: center;
+      margin-top: 50px;
+      opacity: 0.5;
     }
-
-    #preview img {
-      max-width:90%;
-      max-height:90%;
-      border-radius:12px;
-    }
-
-    #preview span {
-      position:absolute;
-      top:20px;
-      right:30px;
-      font-size:28px;
-      cursor:pointer;
-    }
-
   </style>
 </head>
 <body>
 
 <header>
-  <h2>📂 Team Gallery</h2>
-  <div>
-    <button onclick="openUpload()">Upload</button>
-  </div>
+  <h1>📂 Galeri Dokumentasi Tim</h1>
+  <button onclick="openUpload()">+ Upload</button>
 </header>
 
-<div id="gallery"></div>
-
-<div id="preview" onclick="closePreview()">
-  <span>✕</span>
-  <img id="previewImg">
-</div>
+<div class="gallery" id="gallery"></div>
+<div class="empty" id="emptyText">Belum ada foto...</div>
 
 <script>
 
-let files = [];
-
-async function loadFiles() {
-  try {
-    const res = await fetch("https://res.cloudinary.com/dqyad2pn9/image/list/publik.json");
-    const data = await res.json();
-
-    files = data.resources.map(file => ({
-      url: "https://res.cloudinary.com/dqyad2pn9/image/upload/" + file.public_id + "." + file.format,
-      name: file.public_id.split("/").pop(),
-      date: file.created_at
-    }));
-
-    render();
-  } catch(err) {
-    console.log("Belum ada file atau list belum aktif");
-  }
-}
+let images = [];
 
 function render(){
   const gallery = document.getElementById("gallery");
-  gallery.innerHTML="";
+  const emptyText = document.getElementById("emptyText");
 
-  files.sort((a,b)=> new Date(b.date)-new Date(a.date));
+  gallery.innerHTML = "";
 
-  files.forEach(f=>{
-    gallery.innerHTML += `
-      <div class="card" onclick="openPreview('${f.url}')">
-        <img src="${f.url}">
-        <div class="overlay">
-          ${new Date(f.date).toLocaleDateString()}
-        </div>
-      </div>
-    `;
+  if(images.length === 0){
+    emptyText.style.display = "block";
+  } else {
+    emptyText.style.display = "none";
+  }
+
+  images.forEach(file => {
+    if(file.type === "video"){
+      const video = document.createElement("video");
+      video.src = file.url;
+      video.controls = true;
+      gallery.appendChild(video);
+    } else {
+      const img = document.createElement("img");
+      img.src = file.url;
+      img.onclick = () => window.open(file.url, "_blank");
+      gallery.appendChild(img);
+    }
   });
-}
-
-function openPreview(url){
-  document.getElementById("previewImg").src = url;
-  document.getElementById("preview").style.display="flex";
-}
-
-function closePreview(){
-  document.getElementById("preview").style.display="none";
 }
 
 function openUpload(){
   const widget = cloudinary.createUploadWidget({
     cloudName: "dqyad2pn9",
     uploadPreset: "College_foto",
-    folder: "publik"
-  }, (error, result) => {
+    sources: ["local", "camera"],
+    multiple: true,
+    resourceType: "auto"
+  },
+  (error, result) => {
     if(!error && result.event === "success"){
-      loadFiles();
+      images.unshift({
+        url: result.info.secure_url,
+        type: result.info.resource_type
+      });
+      render();
     }
   });
+
   widget.open();
 }
 
-loadFiles();
+render();
 
 </script>
 
