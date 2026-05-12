@@ -44,8 +44,6 @@
 <script>
 const PASSWORD = "123456"; // GANTI PASSWORD TIM
 
-let files = JSON.parse(localStorage.getItem("files")) || [];
-
 function login(){
   if(document.getElementById("teamPass").value === PASSWORD){
     document.getElementById("app").style.display="block";
@@ -66,8 +64,21 @@ function openUpload(){
         date: new Date().toISOString(),
         project: document.getElementById("projectName").value
       });
-      localStorage.setItem("files", JSON.stringify(files));
-      render();
+      async function loadFiles() {
+  const res = await fetch(`https://res.cloudinary.com/dqyad2pns/image/list/College_foto.json`);
+  const data = await res.json();
+
+  files = data.resources.map(file => ({
+    url: file.secure_url,
+    name: file.public_id.split("/").pop(),
+    date: file.created_at,
+    project: file.folder || "Umum"
+  }));
+
+  render();
+}
+
+loadFiles();
     }
   });
   widget.open();
