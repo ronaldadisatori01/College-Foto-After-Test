@@ -1,137 +1,186 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Team Dokumentasi</title>
+  <title>Team Gallery</title>
   <script src="https://widget.cloudinary.com/v2.0/global/all.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
   <style>
-    body { font-family: Arial; background:#111; color:white; padding:20px; }
-    button { padding:10px 15px; margin:5px; cursor:pointer; }
-    .file { margin:10px 0; padding:10px; background:#222; }
-    input, select { padding:8px; margin:5px 0; }
-    #loading { display:none; color:yellow; }
+    body {
+      margin:0;
+      font-family: 'Segoe UI', sans-serif;
+      background:#0f0f0f;
+      color:white;
+    }
+
+    header {
+      padding:15px 20px;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      background:#111;
+      position:sticky;
+      top:0;
+      z-index:10;
+      border-bottom:1px solid #222;
+    }
+
+    h2 { margin:0; }
+
+    button {
+      background:#1e88ff;
+      border:none;
+      padding:8px 14px;
+      color:white;
+      border-radius:8px;
+      cursor:pointer;
+    }
+
+    button:hover {
+      opacity:0.9;
+    }
+
+    #gallery {
+      display:grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap:10px;
+      padding:15px;
+    }
+
+    .card {
+      position:relative;
+      overflow:hidden;
+      border-radius:12px;
+      cursor:pointer;
+    }
+
+    .card img {
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      transition:0.3s;
+    }
+
+    .card:hover img {
+      transform:scale(1.05);
+    }
+
+    .overlay {
+      position:absolute;
+      bottom:0;
+      left:0;
+      right:0;
+      padding:8px;
+      background:linear-gradient(to top, rgba(0,0,0,0.7), transparent);
+      font-size:12px;
+    }
+
+    /* Fullscreen preview */
+    #preview {
+      display:none;
+      position:fixed;
+      inset:0;
+      background:rgba(0,0,0,0.9);
+      justify-content:center;
+      align-items:center;
+      z-index:20;
+    }
+
+    #preview img {
+      max-width:90%;
+      max-height:90%;
+      border-radius:12px;
+    }
+
+    #preview span {
+      position:absolute;
+      top:20px;
+      right:30px;
+      font-size:28px;
+      cursor:pointer;
+    }
+
   </style>
 </head>
 <body>
 
-<h2>📂 Dokumentasi Tim</h2>
+<header>
+  <h2>📂 Team Gallery</h2>
+  <div>
+    <button onclick="openUpload()">Upload</button>
+  </div>
+</header>
 
-<input type="password" id="teamPass" placeholder="Password Tim">
-<button onclick="login()">Masuk</button>
+<div id="gallery"></div>
 
-<div id="app" style="display:none;">
-
-  <h3>Upload File</h3>
-  <input type="text" id="projectName" placeholder="Nama Proyek">
-  <button onclick="openUpload()">Upload Foto / Video</button>
-
-  <hr>
-
-  <input type="text" id="search" placeholder="Cari file..." onkeyup="render()">
-
-  <select id="sort" onchange="render()">
-    <option value="new">Terbaru</option>
-    <option value="old">Terlama</option>
-  </select>
-
-  <input type="date" id="filterDate" onchange="render()">
-
-  <button onclick="downloadAll()">Download Semua</button>
-  <p id="loading">⬇️ Sedang menyiapkan download...</p>
-
-  <div id="files"></div>
+<div id="preview" onclick="closePreview()">
+  <span>✕</span>
+  <img id="previewImg">
 </div>
 
 <script>
-const PASSWORD = "123456"; // GANTI PASSWORD TIM
 
-function login(){
-  if(document.getElementById("teamPass").value === PASSWORD){
-    document.getElementById("app").style.display="block";
-  } else {
-    alert("Password salah");
+let files = [];
+
+async function loadFiles() {
+  try {
+    const res = await fetch("https://res.cloudinary.com/dqyad2pn9/image/list/publik.json");
+    const data = await res.json();
+
+    files = data.resources.map(file => ({
+      url: "https://res.cloudinary.com/dqyad2pn9/image/upload/" + file.public_id + "." + file.format,
+      name: file.public_id.split("/").pop(),
+      date: file.created_at
+    }));
+
+    render();
+  } catch(err) {
+    console.log("Belum ada file atau list belum aktif");
   }
-}
-
-function openUpload(){
-  const widget = cloudinary.createUploadWidget({
-    cloudName: "dqyad2pn9",
-    uploadPreset: "College_foto"
-  }, (error, result) => {
-    if(!error && result.event === "success"){
-      files.push({
-        url: result.info.secure_url,
-        name: result.info.original_filename,
-        date: new Date().toISOString(),
-        project: document.getElementById("projectName").value
-      });
-      async function loadFiles() {
-  const res = await fetch(`https://res.cloudinary.com/dqyad2pns/image/list/College_foto.json`);
-  const data = await res.json();
-
-  files = data.resources.map(file => ({
-    url: file.secure_url,
-    name: file.public_id.split("/").pop(),
-    date: file.created_at,
-    project: file.folder || "Umum"
-  }));
-
-  render();
-}
-
-loadFiles();
-    }
-  });
-  widget.open();
 }
 
 function render(){
-  let list = [...files];
-  const search = document.getElementById("search").value.toLowerCase();
-  const sort = document.getElementById("sort").value;
-  const filterDate = document.getElementById("filterDate").value;
+  const gallery = document.getElementById("gallery");
+  gallery.innerHTML="";
 
-  if(search){
-    list = list.filter(f => f.name.toLowerCase().includes(search));
-  }
+  files.sort((a,b)=> new Date(b.date)-new Date(a.date));
 
-  if(filterDate){
-    list = list.filter(f => f.date.startsWith(filterDate));
-  }
-
-  if(sort === "new"){
-    list.sort((a,b)=> new Date(b.date)-new Date(a.date));
-  } else {
-    list.sort((a,b)=> new Date(a.date)-new Date(b.date));
-  }
-
-  const container = document.getElementById("files");
-  container.innerHTML="";
-  list.forEach(f=>{
-    container.innerHTML += `
-      <div class="file">
-        📁 ${f.project || "-"} <br>
-        📄 ${f.name} <br>
-        📅 ${new Date(f.date).toLocaleString()} <br>
-        <a href="${f.url}" target="_blank">Lihat</a>
+  files.forEach(f=>{
+    gallery.innerHTML += `
+      <div class="card" onclick="openPreview('${f.url}')">
+        <img src="${f.url}">
+        <div class="overlay">
+          ${new Date(f.date).toLocaleDateString()}
+        </div>
       </div>
     `;
   });
 }
 
-function downloadAll(){
-  document.getElementById("loading").style.display="block";
-  files.forEach(f=>{
-    const a = document.createElement("a");
-    a.href = f.url;
-    a.download = "";
-    a.click();
-  });
-  setTimeout(()=>{
-    document.getElementById("loading").style.display="none";
-  },2000);
+function openPreview(url){
+  document.getElementById("previewImg").src = url;
+  document.getElementById("preview").style.display="flex";
 }
 
-render();
+function closePreview(){
+  document.getElementById("preview").style.display="none";
+}
+
+function openUpload(){
+  const widget = cloudinary.createUploadWidget({
+    cloudName: "dqyad2pn9",
+    uploadPreset: "College_foto",
+    folder: "publik"
+  }, (error, result) => {
+    if(!error && result.event === "success"){
+      loadFiles();
+    }
+  });
+  widget.open();
+}
+
+loadFiles();
+
 </script>
 
 </body>
