@@ -56,8 +56,8 @@ function login(){
 
 function openUpload(){
   const widget = cloudinary.createUploadWidget({
-    cloudName: "CLOUDINARY_CLOUD_NAME",
-    uploadPreset: "unsigned_preset"
+    cloudName: "dqyad2pn9",
+    uploadPreset: "ml_default"
   }, (error, result) => {
     if(!error && result.event === "success"){
       files.push({
