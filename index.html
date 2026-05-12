@@ -1,136 +1,126 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Dokumentasi Tim</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Team Dokumentasi</title>
+  <script src="https://widget.cloudinary.com/v2.0/global/all.js"></script>
   <style>
-    body { font-family: Arial; background:#f4f4f4; padding:20px; }
-    .box { background:white; padding:15px; border-radius:10px; margin-bottom:20px; }
-    button { padding:8px 15px; border:none; background:#007bff; color:white; border-radius:6px; }
-    input, select { padding:8px; margin:5px 0; width:100%; }
-    .gallery { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px; }
-    .card { background:white; padding:8px; border-radius:8px; }
-    img, video { width:100%; border-radius:8px; }
+    body { font-family: Arial; background:#111; color:white; padding:20px; }
+    button { padding:10px 15px; margin:5px; cursor:pointer; }
+    .file { margin:10px 0; padding:10px; background:#222; }
+    input, select { padding:8px; margin:5px 0; }
+    #loading { display:none; color:yellow; }
   </style>
 </head>
 <body>
 
-<h2>Dokumentasi Tim</h2>
+<h2>📂 Dokumentasi Tim</h2>
 
-<div class="box" id="loginBox">
-  <input type="password" id="password" placeholder="Masukkan password tim">
-  <button onclick="login()">Masuk</button>
-</div>
+<input type="password" id="teamPass" placeholder="Password Tim">
+<button onclick="login()">Masuk</button>
 
-<div id="mainContent" style="display:none">
+<div id="app" style="display:none;">
 
-  <div class="box">
-    <select id="projectSelect"></select>
-    <input type="file" id="fileInput">
-    <button onclick="uploadFile()">Upload</button>
-    <br><br>
-    <input type="text" id="searchInput" placeholder="Cari file..." oninput="render()">
-    <input type="date" id="filterDate" onchange="render()">
-    <select id="sortOption" onchange="render()">
-      <option value="newest">Terbaru</option>
-      <option value="oldest">Terlama</option>
-    </select>
-    <br><br>
-    <button onclick="downloadAll()">Download Semua</button>
-  </div>
+  <h3>Upload File</h3>
+  <input type="text" id="projectName" placeholder="Nama Proyek">
+  <button onclick="openUpload()">Upload Foto / Video</button>
 
-  <div class="gallery" id="gallery"></div>
+  <hr>
 
+  <input type="text" id="search" placeholder="Cari file..." onkeyup="render()">
+
+  <select id="sort" onchange="render()">
+    <option value="new">Terbaru</option>
+    <option value="old">Terlama</option>
+  </select>
+
+  <input type="date" id="filterDate" onchange="render()">
+
+  <button onclick="downloadAll()">Download Semua</button>
+  <p id="loading">⬇️ Sedang menyiapkan download...</p>
+
+  <div id="files"></div>
 </div>
 
 <script>
-const TEAM_PASSWORD = "tim123";
-const projects = ["Proyek-A","Proyek-B","Meeting","Lapangan"];
-let files = JSON.parse(localStorage.getItem("files") || "[]");
+const PASSWORD = "123456"; // GANTI PASSWORD TIM
+
+let files = JSON.parse(localStorage.getItem("files")) || [];
 
 function login(){
-  if(document.getElementById("password").value === TEAM_PASSWORD){
-    document.getElementById("loginBox").style.display="none";
-    document.getElementById("mainContent").style.display="block";
-    loadProjects();
-    render();
+  if(document.getElementById("teamPass").value === PASSWORD){
+    document.getElementById("app").style.display="block";
   } else {
     alert("Password salah");
   }
 }
 
-function loadProjects(){
-  const select = document.getElementById("projectSelect");
-  projects.forEach(p=>{
-    const opt=document.createElement("option");
-    opt.value=p;
-    opt.textContent=p;
-    select.appendChild(opt);
+function openUpload(){
+  const widget = cloudinary.createUploadWidget({
+    cloudName: "CLOUDINARY_CLOUD_NAME",
+    uploadPreset: "unsigned_preset"
+  }, (error, result) => {
+    if(!error && result.event === "success"){
+      files.push({
+        url: result.info.secure_url,
+        name: result.info.original_filename,
+        date: new Date().toISOString(),
+        project: document.getElementById("projectName").value
+      });
+      localStorage.setItem("files", JSON.stringify(files));
+      render();
+    }
   });
-}
-
-function uploadFile(){
-  const fileInput=document.getElementById("fileInput");
-  const project=document.getElementById("projectSelect").value;
-  const file=fileInput.files[0];
-  if(!file) return alert("Pilih file dulu");
-
-  const reader=new FileReader();
-  reader.onload=function(e){
-    files.push({
-      name:file.name,
-      url:e.target.result,
-      project:project,
-      date:new Date().toISOString()
-    });
-    localStorage.setItem("files",JSON.stringify(files));
-    render();
-  };
-  reader.readAsDataURL(file);
+  widget.open();
 }
 
 function render(){
-  const gallery=document.getElementById("gallery");
-  const project=document.getElementById("projectSelect").value;
-  const keyword=document.getElementById("searchInput").value.toLowerCase();
-  const filterDate=document.getElementById("filterDate").value;
-  const sort=document.getElementById("sortOption").value;
+  let list = [...files];
+  const search = document.getElementById("search").value.toLowerCase();
+  const sort = document.getElementById("sort").value;
+  const filterDate = document.getElementById("filterDate").value;
 
-  let filtered=files.filter(f=>f.project===project);
+  if(search){
+    list = list.filter(f => f.name.toLowerCase().includes(search));
+  }
 
-  if(keyword) filtered=filtered.filter(f=>f.name.toLowerCase().includes(keyword));
-  if(filterDate) filtered=filtered.filter(f=>f.date.startsWith(filterDate));
+  if(filterDate){
+    list = list.filter(f => f.date.startsWith(filterDate));
+  }
 
-  filtered.sort((a,b)=> sort==="newest" ?
-    new Date(b.date)-new Date(a.date) :
-    new Date(a.date)-new Date(b.date)
-  );
+  if(sort === "new"){
+    list.sort((a,b)=> new Date(b.date)-new Date(a.date));
+  } else {
+    list.sort((a,b)=> new Date(a.date)-new Date(b.date));
+  }
 
-  gallery.innerHTML="";
-  filtered.forEach(f=>{
-    const div=document.createElement("div");
-    div.className="card";
-    div.innerHTML=`
-      ${f.url.match(/\\.(mp4|webm|ogg)/i)?
-        `<video src="${f.url}" controls></video>`:
-        `<img src="${f.url}">`
-      }
-      <small>${f.name}</small>
+  const container = document.getElementById("files");
+  container.innerHTML="";
+  list.forEach(f=>{
+    container.innerHTML += `
+      <div class="file">
+        📁 ${f.project || "-"} <br>
+        📄 ${f.name} <br>
+        📅 ${new Date(f.date).toLocaleString()} <br>
+        <a href="${f.url}" target="_blank">Lihat</a>
+      </div>
     `;
-    gallery.appendChild(div);
   });
 }
 
 function downloadAll(){
-  alert("Browser akan download satu per satu file.");
-  const project=document.getElementById("projectSelect").value;
-  files.filter(f=>f.project===project).forEach(f=>{
-    const a=document.createElement("a");
-    a.href=f.url;
-    a.download=f.name;
+  document.getElementById("loading").style.display="block";
+  files.forEach(f=>{
+    const a = document.createElement("a");
+    a.href = f.url;
+    a.download = "";
     a.click();
   });
+  setTimeout(()=>{
+    document.getElementById("loading").style.display="none";
+  },2000);
 }
+
+render();
 </script>
 
 </body>
