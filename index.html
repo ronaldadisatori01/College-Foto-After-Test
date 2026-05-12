@@ -57,7 +57,7 @@ function login(){
 function openUpload(){
   const widget = cloudinary.createUploadWidget({
     cloudName: "dqyad2pn9",
-    uploadPreset: "ml_default"
+    uploadPreset: "College_foto"
   }, (error, result) => {
     if(!error && result.event === "success"){
       files.push({
